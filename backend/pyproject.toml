@@ -1,0 +1,24 @@
+[project]
+name = "elevenlabs-stt"
+version = "0.1.0"
+description = "Realtime STT service using ElevenLabs API"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "elevenlabs>=1.0",
+    "python-multipart>=0.0.9",
+    "httpx>=0.27",
+    "websockets>=13.0",
+    "python-dotenv>=1.0",
+    "openwakeword>=0.6.0",
+    "onnxruntime>=1.28.0",
+    "numpy>=2.0",
+]
+
+[tool.uv]
+# openwakeword requires tflite-runtime on Linux, which publishes no cp312+
+# wheels, so universal resolution fails against requires-python >=3.12. We run
+# the ONNX inference path and never import tflite, so narrow the marker instead
+# of pinning the whole project back to 3.11.
+override-dependencies = ["tflite-runtime; python_version < '3.12'"]

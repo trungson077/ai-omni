@@ -1,0 +1,13 @@
+[project]
+name = "owwtest"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "numpy>=2.4.6",
+    "onnxruntime>=1.28.0",
+    "openwakeword>=0.6.0",
+    "scipy>=1.17.1",
+    "sounddevice>=0.5.5",
+]
