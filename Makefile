@@ -1,4 +1,4 @@
-.PHONY: start stop install dev-be dev-fe dev-cam wake-test wake-diag wake-sep clean
+.PHONY: start stop install dev-be dev-fake dev-fe dev-cam wake-test wake-diag wake-sep clean
 
 start:
 	bash start.sh
@@ -11,6 +11,12 @@ install:
 
 dev-be:
 	cd backend && uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+
+# The backend plus the UI replay fixture, for exercising panels that a live
+# agent can't be made to produce on demand — approvals, tool sequences, the
+# camera trigger, mid-turn failures. Open with ?wire=fake&script=S1 (S1..S8).
+dev-fake:
+	cd backend && NOVA_FAKE_WIRE=1 uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
 dev-fe:
 	cd frontend && npm run dev

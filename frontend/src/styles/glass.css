@@ -1,0 +1,97 @@
+/*
+ * The glass primitive. Every floating surface in NOVA is this.
+ *
+ * The look comes from four things stacked, and it falls apart if you drop any
+ * of them:
+ *   1. blur + saturate + BRIGHTNESS on the backdrop. Over a near-black ground,
+ *      blur alone yields black; the brightness lift is what makes it material.
+ *   2. A vertical tint gradient, not a flat white fill — flat reads as plastic.
+ *   3. A directional edge: bright top-left decaying to nothing bottom-right,
+ *      as if lit from above. Plus an inner bevel for actual thickness.
+ *   4. Layered shadows at three distances, so it sits in space.
+ *
+ * NEVER animate backdrop-filter — cross-fade a sibling's opacity instead.
+ */
+.glass {
+  position: relative;
+  border-radius: var(--r-pane);
+  background:
+    linear-gradient(
+      168deg,
+      var(--glass-tint-top) 0%,
+      var(--glass-tint-mid) 46%,
+      var(--glass-tint-bot) 100%
+    ),
+    /* The panel's own body, so it is a material even against pure black rather
+       than a hole with a rim. Straight off the neutral ramp (n-800 → n-900):
+       this used to be a dark teal, which put a green cast on every surface and
+       fought the blue accent everywhere the two met. */
+    linear-gradient(180deg, rgba(18, 20, 23, 0.66), rgba(8, 9, 10, 0.76));
+  backdrop-filter: var(--glass-filter);
+  -webkit-backdrop-filter: var(--glass-filter);
+  box-shadow: var(--glass-shadow), var(--glass-bevel);
+  isolation: isolate;
+}
+
+/* Directional hairline edge, lit from above-left. */
+.glass::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: var(--hairline);
+  background: linear-gradient(
+    155deg,
+    var(--glass-edge-hi) 0%,
+    rgba(255, 255, 255, 0.1) 22%,
+    var(--glass-edge-lo) 52%,
+    rgba(255, 255, 255, 0.03) 100%
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* Broad specular sweep across the upper body. */
+.glass::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background:
+    radial-gradient(
+      120% 90% at 12% -8%,
+      rgba(255, 255, 255, 0.1) 0%,
+      rgba(255, 255, 255, 0.03) 34%,
+      transparent 62%
+    );
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* ── State variants ───────────────────────────────────────── */
+
+/* Focused pane — a whisper of accent, nothing louder. */
+.glass--live {
+  box-shadow:
+    var(--glass-shadow),
+    var(--glass-bevel),
+    0 0 0 1px rgba(10, 132, 255, 0.14),
+    0 0 60px -18px var(--accent-glow);
+}
+
+.glass--lifted {
+  box-shadow:
+    0 2px 4px rgba(0, 0, 0, 0.45),
+    0 20px 40px -8px rgba(0, 0, 0, 0.6),
+    0 56px 100px -24px rgba(0, 0, 0, 0.78),
+    var(--glass-bevel),
+    0 0 70px -20px var(--accent-glow);
+}

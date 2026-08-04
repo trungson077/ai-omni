@@ -1,0 +1,108 @@
+.cmdk-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-overlay);
+  display: flex;
+  justify-content: center;
+  padding-top: 16vh;
+  background: rgba(3, 5, 9, 0.5);
+  backdrop-filter: blur(2px);
+  animation: fade-in 140ms var(--ease-out);
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+.cmdk {
+  width: min(520px, calc(100vw - 48px));
+  height: fit-content;
+  max-height: 60vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: cmdk-in 200ms var(--ease-out);
+}
+
+@keyframes cmdk-in {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.985);
+  }
+}
+
+.cmdk__input {
+  height: 48px;
+  padding: 0 18px;
+  font-size: 15px;
+  letter-spacing: -0.01em;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  position: relative;
+  z-index: 3;
+  flex: 0 0 48px;
+}
+.cmdk__input::placeholder {
+  color: var(--ink-4);
+}
+
+.cmdk__list {
+  overflow-y: auto;
+  padding: 6px;
+  position: relative;
+  z-index: 3;
+}
+
+.cmdk__group {
+  font: 500 9px/1 var(--font-mono);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+  padding: 10px 12px 6px;
+}
+
+.cmdk__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 12px;
+  border-radius: 8px;
+  text-align: left;
+  font-size: 13.5px;
+  color: var(--ink-2);
+  transition: background var(--t-fast) var(--ease-out);
+}
+.cmdk__item[data-active='true'] {
+  background: rgba(10, 132, 255, 0.11);
+  color: var(--ink);
+  box-shadow: inset 0 0 0 1px rgba(10, 132, 255, 0.18);
+}
+
+.cmdk__glyph {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+  display: grid;
+  place-items: center;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  font: 500 9px/1 var(--font-mono);
+  color: var(--acc);
+}
+
+.cmdk__hint {
+  margin-left: auto;
+  font: 400 9px/1 var(--font-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+}
+
+.cmdk__empty {
+  padding: 22px 12px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--ink-4);
+}

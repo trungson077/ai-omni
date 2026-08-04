@@ -51,6 +51,10 @@ UTTERANCE_SPEECH_RMS = float(os.environ.get("UTTERANCE_SPEECH_RMS", 300))
 UTTERANCE_SILENCE_MS = int(os.environ.get("UTTERANCE_SILENCE_MS", 1200))
 UTTERANCE_NO_SPEECH_MS = int(os.environ.get("UTTERANCE_NO_SPEECH_MS", 4000))
 UTTERANCE_MAX_MS = int(os.environ.get("UTTERANCE_MAX_MS", 15000))
+# The cap when the capture was opened by the talk control instead of the wake
+# word. Much longer, because nothing else will end it: the endpointer is off in
+# that mode, so this is the only bound on how much audio one press can gather.
+MANUAL_MAX_MS = int(os.environ.get("MANUAL_MAX_MS", 60000))
 # Ignore the mic for a moment after Nova stops talking so her own voice tail
 # cannot re-trigger the wake word.
 REARM_DELAY_MS = int(os.environ.get("REARM_DELAY_MS", 500))

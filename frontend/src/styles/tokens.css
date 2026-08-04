@@ -1,0 +1,97 @@
+:root {
+  /* ── Neutral ramp — no hue ───────────────────────────────────
+     Every grey here is truly achromatic (R=G=B) except the two darkest, which
+     carry a barely-there cool cast. Nothing else in the interface is allowed a
+     hue: that is what makes one accent read as loud as it does. */
+  --n-900: #08090a; /* the room */
+  --n-800: #121417; /* raised surface */
+  --n-700: #23272d; /* borders, dividers */
+  --n-600: #343a41; /* stronger borders, hover */
+  --n-500: #6e6e73; /* dimmest legible text */
+  --n-400: #86868b; /* secondary text */
+  --n-200: #c7c7cc; /* body text */
+  --n-000: #f5f5f7; /* primary text */
+
+  /* ── Surface ─────────────────────────────────────────────── */
+  /* The blob is the only real light source in the room. */
+  --bg: var(--n-900);
+  --bg-lift: var(--n-800);
+
+  /* ── Accent — one hue, 211° ──────────────────────────────── */
+  --acc-deep: #0071e3; /* the blob's core, pressed states */
+  --acc: #0a84ff; /* strokes, labels, active state */
+  --acc-soft: #64b5ff; /* bright text on dark */
+
+  /* The one permitted exception to the single hue. A failed command has to read
+     as failed, and there is no way to say that in blue or in grey. */
+  --danger: #ff453a;
+
+  /* ── Text ────────────────────────────────────────────────── */
+  --ink: var(--n-000);
+  --ink-2: var(--n-200);
+  --ink-3: var(--n-400);
+  --ink-4: var(--n-500);
+
+  /* ── Glass ───────────────────────────────────────────────── */
+  /* Over a near-black ground, backdrop-filter alone gives you black —
+     brightness() has nothing to lift. So the panel carries its own fill, and
+     the filter's job is only to pick up the blob's glow when a panel drifts
+     across it. The fill is pure white at low alpha: any tint here would put a
+     hue back into the neutrals. */
+  /* 22px, not 40px. Measured: ten panels at 40px blur cost ~11fps on a 2×
+     display; at 22px the frame budget is clear. Because the panel carries its
+     own fill, the extra blur was buying almost nothing visually. */
+  --glass-blur: 22px;
+  --glass-filter: blur(22px) saturate(115%) brightness(1.45);
+  --glass-tint-top: rgba(255, 255, 255, 0.075);
+  --glass-tint-mid: rgba(255, 255, 255, 0.04);
+  --glass-tint-bot: rgba(255, 255, 255, 0.022);
+  --glass-edge-hi: rgba(255, 255, 255, 0.26);
+  --glass-edge-lo: rgba(255, 255, 255, 0.045);
+  --glass-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.5), 0 8px 20px -6px rgba(0, 0, 0, 0.6),
+    0 32px 64px -16px rgba(0, 0, 0, 0.8);
+  /* Top bevel + bottom thickness. Reads as a real edge, not a border. */
+  --glass-bevel:
+    inset 0 1px 0 rgba(255, 255, 255, 0.14), inset 0 -1px 0 rgba(0, 0, 0, 0.3);
+
+  --accent: var(--acc);
+  --accent-glow: rgba(10, 132, 255, 0.22);
+
+  /* ── Geometry ────────────────────────────────────────────── */
+  --r-pane: 18px;
+  --r-inner: 10px;
+  --r-pill: 999px;
+  --hairline: 1px;
+  --grid: 8px;
+  --margin: 24px;
+
+  /* ── Type ────────────────────────────────────────────────── */
+  --font-ui: 'Satoshi', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'Martian Mono', ui-monospace, 'SF Mono', monospace;
+  --label: 500 10px/1 var(--font-mono);
+  --label-track: 0.16em;
+
+  /* ── Motion ──────────────────────────────────────────────── */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-snap: cubic-bezier(0.2, 0.9, 0.1, 1);
+  --t-fast: 140ms;
+  --t-base: 240ms;
+  --t-spawn: 380ms;
+
+  /* ── Layers ──────────────────────────────────────────────── */
+  --z-backdrop: 0;
+  --z-blob: 10;
+  --z-tether: 20;
+  --z-panes: 100;
+  --z-overlay: 9000;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --t-fast: 1ms;
+    --t-base: 1ms;
+    --t-spawn: 120ms;
+  }
+}

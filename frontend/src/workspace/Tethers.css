@@ -1,0 +1,36 @@
+.tethers {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: var(--z-tether);
+  pointer-events: none;
+  overflow: visible;
+}
+
+.tether {
+  fill: none;
+  stroke: var(--acc);
+  stroke-width: 1;
+  stroke-opacity: 0.16;
+  stroke-dasharray: 3 5;
+  animation:
+    tether-draw 620ms var(--ease-out) both,
+    tether-crawl 14s linear infinite;
+}
+
+/* Draws itself in on spawn, then settles to a slow crawl. */
+@keyframes tether-draw {
+  from {
+    stroke-opacity: 0;
+  }
+  to {
+    stroke-opacity: 0.16;
+  }
+}
+
+@keyframes tether-crawl {
+  to {
+    stroke-dashoffset: -160;
+  }
+}

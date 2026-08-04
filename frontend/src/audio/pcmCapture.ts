@@ -40,6 +40,12 @@ registerProcessor('pcm-processor', PcmProcessor);
 
 export interface PcmCapture {
   analyser: AnalyserNode;
+  /**
+   * Exposed so the session can watch `mute`/`ended` on the track. A frame-rate
+   * watchdog alone can't see an OS-muted mic: the worklet keeps posting frames,
+   * they are just silent, which is indistinguishable from a quiet room.
+   */
+  stream: MediaStream;
   stop: () => void;
 }
 
@@ -87,6 +93,7 @@ export async function startPcmCapture(
 
   return {
     analyser,
+    stream,
     stop: () => {
       node.port.onmessage = null;
       try {

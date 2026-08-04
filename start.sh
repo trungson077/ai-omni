@@ -3,6 +3,13 @@ set -e
 
 cd "$(dirname "$0")"
 
+# The camera reads its config from bare os.environ — unlike the backend, which
+# loads .env itself via dotenv. Export .env here so CAMERA_RTSP_URL and friends
+# reach service.py.
+set -a
+. ./.env
+set +a
+
 # Install backend deps
 echo "==> Installing backend..."
 cd backend

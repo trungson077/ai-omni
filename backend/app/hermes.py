@@ -7,6 +7,10 @@ import websockets
 
 logger = logging.getLogger(__name__)
 
+# Ceiling on a single tool's forwarded output. Generous enough for real command
+# output, small enough that one runaway command cannot wedge the browser.
+MAX_TOOL_OUTPUT = 4000
+
 
 class HermesClient:
     """Manages a persistent WebSocket connection + session to Hermes."""
@@ -113,14 +117,39 @@ class HermesClient:
                     "type": "hermes.tool",
                     "name": payload.get("name", ""),
                     "status": "start",
+                    # A real correlation id. Without it the UI has to guess which
+                    # completion belongs to which start by matching names, which
+                    # is wrong the moment one tool runs twice concurrently.
+                    "tool_id": payload.get("tool_id", ""),
+                    # For the terminal tool this is the command itself, and it is
+                    # available now rather than only on completion.
+                    "context": payload.get("context", ""),
                 }
             elif event_type == "tool.complete":
-                # Hermes only carries the tool arguments on completion.
+                # Hermes does carry the result, contrary to what this code used
+                # to assume: result = {output, exit_code, error, ...}.
+                result = payload.get("result")
+                if not isinstance(result, dict):
+                    result = {"output": "" if result is None else str(result)}
+                output = result.get("output") or ""
+                if not isinstance(output, str):
+                    output = json.dumps(output, indent=2, default=str)
+                # A command like `find /` can emit megabytes, and every byte would
+                # cross the browser socket and land in a DOM node. The tail is the
+                # part worth reading, so keep the head and say what was dropped.
+                if len(output) > MAX_TOOL_OUTPUT:
+                    dropped = len(output) - MAX_TOOL_OUTPUT
+                    output = output[:MAX_TOOL_OUTPUT] + f"\n… {dropped} more characters"
                 yield {
                     "type": "hermes.tool",
                     "name": payload.get("name", ""),
                     "args": payload.get("args", {}),
                     "status": "complete",
+                    "tool_id": payload.get("tool_id", ""),
+                    "duration_s": payload.get("duration_s"),
+                    "output": output,
+                    "exit_code": result.get("exit_code"),
+                    "error": result.get("error"),
                 }
             elif event_type == "approval.request":
                 # Hermes is blocked until someone calls approval.respond.
@@ -141,7 +170,11 @@ class HermesClient:
                 if text and not text.isspace():
                     yield {"type": "hermes.thinking", "text": text}
             elif event_type == "error":
-                yield {"type": "hermes.error", "message": str(payload)}
+                # Prefer the human-readable field. str(payload) put a raw Python
+                # dict repr on screen — quoting, braces and all — which reads as
+                # a crash rather than as the explanation it actually is.
+                message = payload.get("message") or payload.get("error") or str(payload)
+                yield {"type": "hermes.error", "message": str(message)}
                 break
 
     async def close(self):

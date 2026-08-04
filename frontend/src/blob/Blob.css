@@ -1,0 +1,64 @@
+.blob {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: var(--z-blob);
+  pointer-events: none;
+  /* -50% centres the box on (--bx, --by). Applied first so the offsets read
+     as a plain centre position. */
+  transform: translate(-50%, -50%) translate3d(var(--bx), var(--by), 0);
+  /* A drift, not a move.
+     The ease matters more than the duration here. ease-out-expo (0.16,1,0.3,1)
+     spends most of its distance in the first fraction of the time, so however
+     long you set it, the blob *launches* and then coasts — which reads as
+     something being repositioned. A symmetric sine ease has no launch: it
+     accelerates and decelerates equally, so at 6s there is no moment where it
+     is visibly travelling. */
+  transition: transform 6000ms cubic-bezier(0.37, 0, 0.63, 1);
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .blob {
+    transition: none;
+  }
+}
+
+.blob__canvas {
+  display: block;
+}
+
+/* ── Labels ───────────────────────────────────────────────── */
+/* Two small marks, centred on the blob. No rules, no brackets. */
+
+.blob__mark {
+  position: absolute;
+  bottom: calc(50% + var(--label-offset));
+  left: 50%;
+  transform: translateX(-50%);
+  font: 500 11px/1 var(--font-mono);
+  letter-spacing: 0.46em;
+  text-indent: 0.46em;
+  text-transform: uppercase;
+  color: rgba(245, 245, 247, 0.34);
+  white-space: nowrap;
+}
+
+.blob__state {
+  position: absolute;
+  top: calc(50% + var(--label-offset));
+  left: 50%;
+  transform: translateX(-50%);
+  font: 400 9px/1 var(--font-mono);
+  letter-spacing: 0.34em;
+  text-indent: 0.34em;
+  text-transform: uppercase;
+  color: rgba(100, 181, 255, 0.5);
+  white-space: nowrap;
+  transition: color var(--t-base) var(--ease-out);
+}
+
+.blob__state[data-state='thinking'],
+.blob__state[data-state='executing'] {
+  color: rgba(100, 181, 255, 0.82);
+}

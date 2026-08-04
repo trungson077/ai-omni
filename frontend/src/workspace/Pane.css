@@ -1,0 +1,236 @@
+.pane {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  will-change: transform;
+  transition: transform var(--t-spawn) var(--ease-out);
+  contain: layout paint;
+}
+
+/* Direct manipulation must never lag behind the pointer. */
+.pane--dragging,
+.pane--resizing {
+  transition: none !important;
+}
+.pane--dragging {
+  cursor: grabbing;
+}
+
+.pane__shell {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  opacity: 1;
+  transform: scale(1);
+  transition:
+    opacity var(--t-spawn) var(--ease-out),
+    transform var(--t-spawn) var(--ease-out);
+}
+
+.pane--entering .pane__shell {
+  opacity: 0;
+  transform: scale(0.93);
+}
+
+.pane--leaving .pane__shell {
+  opacity: 0;
+  transform: scale(0.96);
+  transition-duration: 220ms;
+}
+
+/* ── TTL drain hairline ───────────────────────────────────── */
+.pane__ttl {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 1.5px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, transparent, var(--accent));
+  box-shadow: 0 0 10px var(--accent-glow);
+  opacity: 0.6;
+  z-index: 4;
+  pointer-events: none;
+}
+
+/* ── Header ───────────────────────────────────────────────── */
+.pane__head {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 0 11px 0 14px;
+  height: 36px;
+  flex: 0 0 36px;
+  cursor: grab;
+  user-select: none;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.055);
+  position: relative;
+  z-index: 3;
+}
+.pane__head:active {
+  cursor: grabbing;
+}
+
+/* Small state pip — the only always-coloured element in the chrome. */
+.pane__pip {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+  background: var(--n-500);
+  transition:
+    background var(--t-base) var(--ease-out),
+    box-shadow var(--t-base) var(--ease-out);
+}
+/* Accent is earned: a live feed, or the pane you are working in. */
+.pane__pip--pulse,
+.pane:focus-within .pane__pip,
+.pane:hover .pane__pip {
+  background: var(--accent);
+  box-shadow: 0 0 9px -1px var(--accent);
+}
+.pane__pip--pulse {
+  animation: pip-pulse 1.6s var(--ease-in-out) infinite;
+}
+@keyframes pip-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.45;
+    transform: scale(0.7);
+  }
+}
+
+.pane__title {
+  font: 500 9.5px/1 var(--font-mono);
+  letter-spacing: 0.17em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+  min-width: 0;
+}
+
+.pane__meta {
+  font: 300 9px/1 var(--font-mono);
+  letter-spacing: 0.1em;
+  color: var(--ink-4);
+  flex: 0 0 auto;
+  font-variant-numeric: tabular-nums;
+}
+
+.pane__btn {
+  width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  border-radius: 6px;
+  color: var(--ink-4);
+  flex: 0 0 auto;
+  transition:
+    color var(--t-fast) var(--ease-out),
+    background var(--t-fast) var(--ease-out);
+}
+.pane__btn:hover {
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.08);
+}
+.pane__btn--on {
+  color: var(--accent);
+}
+.pane__btn--danger:hover {
+  color: var(--danger);
+  background: rgba(229, 100, 106, 0.14);
+}
+
+/* ── Body ─────────────────────────────────────────────────── */
+.pane__body {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  z-index: 1;
+  overflow: auto;
+}
+
+/* ── Resize handles ───────────────────────────────────────── */
+.pane__grip {
+  position: absolute;
+  z-index: 5;
+}
+.pane__grip[data-resize='n'],
+.pane__grip[data-resize='s'] {
+  left: 8px;
+  right: 8px;
+  height: 6px;
+  cursor: ns-resize;
+}
+.pane__grip[data-resize='e'],
+.pane__grip[data-resize='w'] {
+  top: 8px;
+  bottom: 8px;
+  width: 6px;
+  cursor: ew-resize;
+}
+.pane__grip[data-resize='n'] {
+  top: -3px;
+}
+.pane__grip[data-resize='s'] {
+  bottom: -3px;
+}
+.pane__grip[data-resize='e'] {
+  right: -3px;
+}
+.pane__grip[data-resize='w'] {
+  left: -3px;
+}
+.pane__grip[data-resize$='e'][data-resize$='e'],
+.pane__grip[data-corner] {
+  width: 13px;
+  height: 13px;
+}
+.pane__grip[data-resize='ne'] {
+  top: -3px;
+  right: -3px;
+  cursor: nesw-resize;
+}
+.pane__grip[data-resize='nw'] {
+  top: -3px;
+  left: -3px;
+  cursor: nwse-resize;
+}
+.pane__grip[data-resize='se'] {
+  bottom: -3px;
+  right: -3px;
+  cursor: nwse-resize;
+}
+.pane__grip[data-resize='sw'] {
+  bottom: -3px;
+  left: -3px;
+  cursor: nesw-resize;
+}
+
+/* A visible tick on the SE corner, so resizing is discoverable. */
+.pane__grip[data-resize='se']::after {
+  content: '';
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  width: 7px;
+  height: 7px;
+  border-right: 1px solid var(--ink-4);
+  border-bottom: 1px solid var(--ink-4);
+  border-bottom-right-radius: 3px;
+  transition: border-color var(--t-fast) var(--ease-out);
+}
+.pane:hover .pane__grip[data-resize='se']::after {
+  border-color: var(--accent);
+}

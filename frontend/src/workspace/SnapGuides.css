@@ -1,0 +1,35 @@
+.guides {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 8000;
+}
+
+.guide {
+  position: absolute;
+  background: var(--acc);
+  opacity: 0.5;
+  box-shadow: 0 0 10px rgba(10, 132, 255, 0.6);
+  animation: guide-in 120ms var(--ease-out);
+}
+
+.guide--x {
+  top: 0;
+  bottom: 0;
+  width: 1px;
+}
+
+.guide--y {
+  left: 0;
+  right: 0;
+  height: 1px;
+}
+
+@keyframes guide-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 0.5;
+  }
+}

@@ -1,0 +1,427 @@
+/* Shared interior styling for every pane kind. The chrome lives in
+   Pane.css; this is only what goes inside the body. */
+
+/* No fixed height: the pane measures this element and fits itself to it. */
+.pk {
+  padding: 12px 14px 14px;
+}
+
+.pk--tight {
+  padding: 10px 12px 12px;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ── Result ───────────────────────────────────────────────── */
+/* The pane fits itself to this element, so the cap here is what stops a
+   200-line document from driving the pane to fill the window. Below the cap it
+   fits exactly: a two-line answer gets a two-line pane. */
+.pk-result {
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+/* Unstructured output. Monospace because column alignment is often the only
+   structure it has, wrapped because horizontal scrolling to read a sentence is
+   worse than a ragged line. */
+.pk-result__raw {
+  font: 400 11.5px/1.6 var(--font-mono);
+  color: var(--ink-2);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.pk-result__rows {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Hairlines between rows, not boxes around them: the eye needs the baseline
+   grid, and a border per row would make eight facts look like eight panels. */
+.pk-result__row {
+  display: grid;
+  grid-template-columns: minmax(0, 8.5em) minmax(0, 1fr);
+  gap: 10px;
+  align-items: baseline;
+  padding: 5px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.055);
+}
+.pk-result__rows > .pk-result__row:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+/* A nested object needs the width, so its label sits above it. */
+.pk-result__row[data-block='true'] {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 5px;
+}
+
+.pk-result__key {
+  font: 500 9px/1.5 var(--font-mono);
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+  overflow-wrap: anywhere;
+}
+
+.pk-result__value {
+  min-width: 0;
+}
+
+/* Tabular figures so a column of numbers lines up on the decimal. */
+.pk-result__val {
+  font: 400 12.5px/1.45 var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.pk-result__nil {
+  font: 400 12px/1.45 var(--font-mono);
+  color: var(--ink-4);
+}
+
+/* A list of scalars, wrapping. Separated by space rather than by commas the
+   data doesn't contain. */
+.pk-result__inline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px 12px;
+}
+
+/* One indent, one rule. Deeper nesting is capped by MAX_DEPTH, so this never
+   stacks more than twice. */
+.pk-result__nest {
+  padding-left: 10px;
+  border-left: 1px solid rgba(255, 255, 255, 0.07);
+}
+.pk-result__sect + .pk-result__sect {
+  margin-top: 8px;
+}
+.pk-result__sect > .pk-result__key {
+  margin-bottom: 3px;
+}
+
+.pk-result__meta {
+  margin-top: 10px;
+  font: 400 9px/1 var(--font-mono);
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+}
+
+/* ── Camera (God Eye) ─────────────────────────────────────── */
+/* The pane opts out of auto-fit, so the stage owns its own aspect and the
+   body simply fills whatever height the user has dragged it to. */
+.pk-camera {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px 12px;
+  height: 100%;
+  min-height: 0;
+}
+
+.pk-camera__stage {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  aspect-ratio: 16 / 9;
+  border-radius: var(--r-inner);
+  overflow: hidden;
+  background: #04070a;
+  border: 1px solid rgba(255, 255, 255, 0.055);
+  display: grid;
+  place-items: center;
+}
+
+.pk-camera__img {
+  width: 100%;
+  height: 100%;
+  /* contain, not cover: a security feed must never be cropped. */
+  object-fit: contain;
+  display: block;
+}
+
+/* Sits over the <img> until a frame lands, so a stalled stream reads as
+   "still connecting" instead of as a broken image. */
+.pk-camera__waiting {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  font: 400 9px/1 var(--font-mono);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+  background: #04070a;
+}
+.pk-camera__spin {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(10, 132, 255, 0.22);
+  border-top-color: var(--acc);
+  animation: spin 0.9s linear infinite;
+}
+
+.pk-camera__error {
+  padding: 14px 16px;
+  text-align: center;
+  max-width: 34ch;
+}
+.pk-camera__error-title {
+  font: 500 10px/1 var(--font-mono);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--acc);
+  margin-bottom: 8px;
+}
+.pk-camera__error p {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--ink-3);
+  margin-bottom: 12px;
+}
+
+.pk-camera__chips {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
+  flex: 0 0 auto;
+}
+.pk-camera__fps {
+  font: 400 9px/1 var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+  margin-right: 3px;
+}
+.pk-camera__none {
+  font: 400 9px/1 var(--font-mono);
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+  opacity: 0.7;
+}
+.pk-camera__chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  padding: 3px 7px;
+  border-radius: 5px;
+  border: 1px solid rgba(10, 132, 255, 0.24);
+  background: rgba(10, 132, 255, 0.07);
+  font: 400 9.5px/1 var(--font-mono);
+  letter-spacing: 0.07em;
+  color: var(--acc);
+}
+.pk-camera__chip b {
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.72;
+}
+
+/* ── System ───────────────────────────────────────────────── */
+.pk-system__text {
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+.pk-system__items {
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.pk-system__items li {
+  font: 400 11px/1.4 var(--font-mono);
+  color: var(--ink-3);
+  padding-left: 13px;
+  position: relative;
+}
+.pk-system__items li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 6px;
+  width: 4px;
+  height: 4px;
+  background: var(--accent);
+  opacity: 0.7;
+}
+
+/* ── Confirm ──────────────────────────────────────────────── */
+.pk-confirm__q {
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+}
+.pk-confirm__d {
+  margin-top: 6px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--ink-3);
+}
+.pk-confirm__actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+}
+.pk-btn {
+  flex: 1;
+  height: 30px;
+  border-radius: 7px;
+  font: 500 10px/1 var(--font-mono);
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--ink-2);
+  transition: all var(--t-fast) var(--ease-out);
+}
+.pk-btn:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--ink);
+}
+.pk-btn--primary {
+  border-color: rgba(10, 132, 255, 0.4);
+  color: var(--acc);
+  background: rgba(10, 132, 255, 0.08);
+}
+.pk-btn--primary:hover {
+  background: rgba(10, 132, 255, 0.18);
+  color: #8ac6ff;
+  box-shadow: 0 0 20px -4px rgba(10, 132, 255, 0.5);
+}
+
+/* ── Media ────────────────────────────────────────────────── */
+/* Opts out of auto-fit, so the stage fills whatever height the pane has and
+   the image sits inside it. */
+.pk-media {
+  height: 100%;
+  padding: 10px 12px 12px;
+  display: flex;
+  min-height: 0;
+}
+
+.pk-media__img,
+.pk-media__video {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  /* contain, never cover: a screenshot cropped to fill the pane is a screenshot
+     with the part you wanted cut off. */
+  object-fit: contain;
+  display: block;
+  border-radius: var(--r-inner);
+  /* No black plate behind it. A portrait screenshot in a 16:9 pane letterboxes
+     either way; against the glass the bars read as the pane, against #000 they
+     read as a broken image. */
+}
+
+.pk-media__audio,
+.pk-media__file {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  align-items: flex-start;
+}
+.pk-media__audio audio {
+  width: 100%;
+}
+
+.pk-media__name {
+  font: 400 11px/1.4 var(--font-mono);
+  color: var(--ink-2);
+  overflow-wrap: anywhere;
+}
+
+.pk-media__open {
+  font: 500 9px/1 var(--font-mono);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--acc);
+  border: 1px solid rgba(10, 132, 255, 0.3);
+  border-radius: 6px;
+  padding: 6px 11px;
+  transition: background var(--t-fast) var(--ease-out);
+}
+.pk-media__open:hover {
+  background: rgba(10, 132, 255, 0.1);
+}
+
+.pk-media__fail-title {
+  font: 500 10px/1 var(--font-mono);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--danger);
+  margin-bottom: 9px;
+}
+.pk-media__path {
+  font: 400 10.5px/1.5 var(--font-mono);
+  color: var(--ink-3);
+  overflow-wrap: anywhere;
+  margin-bottom: 7px;
+}
+.pk-media__reason {
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--ink-4);
+}
+
+/* ── Deck ─────────────────────────────────────────────────── */
+.pk-deck {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+}
+.pk-deck__hint {
+  font: 400 9px/1.3 var(--font-mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+  margin-bottom: 4px;
+}
+.pk-deck__item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.055);
+  background: rgba(255, 255, 255, 0.02);
+  font: 400 10px/1 var(--font-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pk-deck__all {
+  margin-top: 6px;
+  width: 100%;
+  height: 26px;
+  border-radius: 6px;
+  border: 1px solid rgba(10, 132, 255, 0.28);
+  color: var(--acc);
+  font: 500 9px/1 var(--font-mono);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  transition: background var(--t-fast) var(--ease-out);
+}
+.pk-deck__all:hover {
+  background: rgba(10, 132, 255, 0.1);
+}

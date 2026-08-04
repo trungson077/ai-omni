@@ -1,0 +1,415 @@
+.chat {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+/* ── Messages ─────────────────────────────────────────────── */
+.chat__list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 14px 16px 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.chat__empty {
+  margin: auto;
+  text-align: center;
+  padding: 0 20px;
+}
+.chat__empty p {
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--ink-3);
+  margin: 8px 0 0;
+}
+.chat__empty-title {
+  font: 500 10px/1 var(--font-mono);
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: var(--acc);
+  opacity: 0.8;
+}
+.chat__hints {
+  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.chat__hint {
+  font: 400 10.5px/1.4 var(--font-mono);
+  color: var(--ink-4);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 6px;
+  padding: 5px 9px;
+  transition: all var(--t-fast) var(--ease-out);
+  text-align: left;
+}
+.chat__hint:hover {
+  color: var(--acc-soft);
+  border-color: rgba(10, 132, 255, 0.3);
+  background: rgba(10, 132, 255, 0.06);
+}
+
+.msg {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  animation: msg-in 320ms var(--ease-out) both;
+}
+@keyframes msg-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+.msg__who {
+  font: 500 9px/1 var(--font-mono);
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+}
+.msg--nova .msg__who {
+  color: var(--acc);
+  opacity: 0.75;
+}
+
+.msg__text {
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--ink);
+  letter-spacing: -0.005em;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* ── Rendered Markdown ────────────────────────────────────── */
+/* The parser has already turned newlines into blocks, so pre-wrap here would
+   double every gap it created. */
+.md {
+  white-space: normal;
+}
+
+.md-p + .md-p,
+.md-p + .md-list,
+.md-list + .md-p,
+.md-h,
+.md-quote {
+  margin-top: 8px;
+}
+/* Kept, because a paragraph can still hold a deliberate single newline. */
+.md-p {
+  white-space: pre-wrap;
+}
+
+.md strong {
+  font-weight: 600;
+  color: var(--ink);
+}
+.md em {
+  font-style: italic;
+  color: var(--ink-2);
+}
+
+.md-h {
+  font: 600 12px/1.4 var(--font-ui);
+  letter-spacing: 0.01em;
+  color: var(--ink);
+}
+
+.md-list {
+  margin: 6px 0 0;
+  padding-left: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.md-list li {
+  /* The marker sits in the gutter, so a wrapped line aligns under the text
+     rather than under the bullet. */
+  list-style-position: outside;
+  color: var(--ink-2);
+}
+.md-list[data-ordered='false'] li::marker {
+  color: var(--ink-4);
+  content: '· ';
+}
+.md-list[data-ordered='true'] li::marker {
+  font: 500 10px/1 var(--font-mono);
+  color: var(--ink-4);
+}
+
+.md-quote {
+  padding-left: 10px;
+  border-left: 1px solid rgba(255, 255, 255, 0.12);
+  color: var(--ink-3);
+  font-style: italic;
+}
+
+.md-code-inline {
+  font: 400 11.5px/1.4 var(--font-mono);
+  color: var(--acc-soft);
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+  padding: 1px 4px;
+  word-break: break-all;
+}
+
+.md-link {
+  color: var(--acc);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  text-decoration-color: rgba(10, 132, 255, 0.4);
+}
+.md-link:hover {
+  text-decoration-color: var(--acc);
+}
+
+/* ── Fenced code ──────────────────────────────────────────── */
+/* Inset rather than raised: it is a window onto the machine, not another
+   surface floating on the glass. */
+.md-code {
+  margin: 9px 0 2px;
+  border-radius: var(--r-inner);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(0, 0, 0, 0.34);
+  overflow: hidden;
+}
+
+.md-code__bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 9px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.022);
+}
+.md-code__lang {
+  flex: 1;
+  font: 500 8.5px/1 var(--font-mono);
+  letter-spacing: 0.17em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+}
+.md-code__copy {
+  font: 500 8.5px/1 var(--font-mono);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+  transition: color var(--t-fast) var(--ease-out);
+}
+.md-code__copy:hover {
+  color: var(--acc);
+}
+
+.md-code__body {
+  display: flex;
+  flex-direction: column;
+  padding: 8px 9px 9px;
+  font: 400 11px/1.6 var(--font-mono);
+  color: var(--ink-2);
+  /* Wraps rather than scrolls: a long curl is one line, and reading it must not
+     mean dragging a scrollbar inside a chat bubble. */
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.md-code__line {
+  display: flex;
+  gap: 7px;
+}
+/* Its own column, so selecting the block copies the command without it. */
+.md-code__prompt {
+  flex: 0 0 auto;
+  color: var(--ink-4);
+  user-select: none;
+}
+.md-code__text {
+  min-width: 0;
+}
+.md-code[data-shell='true'] .md-code__text {
+  color: var(--ink);
+}
+
+.msg--user {
+  align-self: flex-end;
+  align-items: flex-end;
+  max-width: 86%;
+}
+.msg--user .msg__text {
+  background: rgba(10, 132, 255, 0.09);
+  border: 1px solid rgba(10, 132, 255, 0.16);
+  border-radius: 11px 11px 3px 11px;
+  padding: 7px 11px;
+  color: var(--acc-soft);
+  font-size: 13px;
+}
+
+.msg--nova {
+  max-width: 94%;
+  border-left: 1px solid rgba(10, 132, 255, 0.22);
+  padding-left: 11px;
+}
+
+/* Blinking caret while tokens stream */
+.msg__caret {
+  display: inline-block;
+  width: 6px;
+  height: 13px;
+  margin-left: 2px;
+  background: var(--acc);
+  vertical-align: -2px;
+  animation: caret 1s steps(2) infinite;
+}
+@keyframes caret {
+  50% {
+    opacity: 0;
+  }
+}
+
+/* ── Composer ─────────────────────────────────────────────── */
+.composer {
+  flex: 0 0 auto;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 10px 12px 11px;
+  background: linear-gradient(to top, rgba(255, 255, 255, 0.022), transparent);
+}
+
+.composer__interim {
+  font: 400 11px/1.4 var(--font-mono);
+  color: var(--acc);
+  opacity: 0.62;
+  margin-bottom: 7px;
+  min-height: 15px;
+  font-style: italic;
+}
+
+.composer__row {
+  display: flex;
+  align-items: flex-end;
+  gap: 9px;
+  padding-bottom: 7px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  transition: border-color var(--t-base) var(--ease-out);
+}
+.composer__row:focus-within {
+  border-bottom-color: rgba(10, 132, 255, 0.55);
+  box-shadow: 0 1px 12px -6px var(--acc);
+}
+
+.composer__input {
+  flex: 1;
+  min-height: 22px;
+  max-height: 92px;
+  resize: none;
+  font-size: 13.5px;
+  line-height: 1.45;
+  color: var(--ink);
+  padding: 2px 0;
+}
+.composer__input::placeholder {
+  color: var(--ink-4);
+}
+
+.composer__btn {
+  width: 30px;
+  height: 30px;
+  flex: 0 0 30px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  color: var(--ink-3);
+  transition: all var(--t-fast) var(--ease-out);
+}
+.composer__btn:hover:not(:disabled) {
+  color: var(--ink);
+  border-color: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.05);
+}
+.composer__btn:disabled {
+  opacity: 0.32;
+  cursor: default;
+}
+/* The session is up. A steady state, so it is stated quietly. */
+.composer__btn--on {
+  color: var(--ink);
+  border-color: rgba(255, 255, 255, 0.22);
+}
+
+/* A capture is open right now. The one control in the composer that glows,
+   because it is the one that is actively doing something. */
+.composer__btn--live {
+  color: var(--acc);
+  border-color: rgba(10, 132, 255, 0.45);
+  background: rgba(10, 132, 255, 0.1);
+  box-shadow: 0 0 20px -4px rgba(10, 132, 255, 0.6);
+  animation: talk-pulse 1.8s var(--ease-in-out) infinite;
+}
+@keyframes talk-pulse {
+  50% {
+    box-shadow: 0 0 26px -2px rgba(10, 132, 255, 0.85);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .composer__btn--live {
+    animation: none;
+  }
+}
+.composer__btn--send {
+  color: var(--acc);
+  border-color: rgba(10, 132, 255, 0.3);
+}
+
+.composer__foot {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+}
+.composer__kbd {
+  font: 400 8.5px/1 var(--font-mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+}
+.composer__kbd b {
+  font-weight: 500;
+  color: var(--ink-3);
+}
+.composer__spacer {
+  flex: 1;
+}
+
+/* Reasoning, on its own dim channel above the reply. Monospace and small so it
+   never competes with what Nova actually says. */
+.msg__thinking {
+  font: 400 10.5px/1.5 var(--font-mono);
+  color: var(--ink-4);
+  margin-bottom: 6px;
+  padding-left: 8px;
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 4.5em;
+  overflow: hidden;
+}
+
+
+/* ── Mirrored waveform ────────────────────────────────────── */
+/* Its own row above the input: inline beside the textarea it was 44px wide and
+   read as an icon. Given the full width it reads as what it is. */
+.composer__wave-row {
+  padding: 2px 0 7px;
+}
+.waveform {
+  display: block;
+  /* Spans the composer: the history is the point, and history needs room. */
+  width: 100%;
+  /* Sub-pixel bars on a fractional device ratio blur into mush. */
+  image-rendering: crisp-edges;
+}

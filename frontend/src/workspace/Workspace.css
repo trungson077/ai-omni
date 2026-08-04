@@ -1,0 +1,152 @@
+.workspace {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+}
+
+.canvas {
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-panes);
+}
+
+/* ── Corner HUD furniture ─────────────────────────────────── */
+.hud-corner {
+  position: fixed;
+  z-index: 40;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.hud-corner--tl {
+  top: 18px;
+  left: 20px;
+}
+.hud-corner--tr {
+  top: 18px;
+  right: 20px;
+}
+.hud-corner--bl {
+  bottom: 16px;
+  left: 20px;
+}
+
+.hud-chip {
+  font: 400 9px/1 var(--font-mono);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 4px;
+  padding: 4px 7px;
+  white-space: nowrap;
+}
+.hud-chip b {
+  color: var(--acc);
+  font-weight: 500;
+}
+.hud-chip--live {
+  border-color: rgba(10, 132, 255, 0.3);
+  color: var(--acc);
+}
+.hud-chip b + b,
+.hud-chip--live b {
+  margin-left: 5px;
+}
+/* Not the accent: the accent means "nominal, working". Attention states read as
+   a brighter neutral so they are distinct without adding a second hue. */
+.hud-chip--warn {
+  border-color: var(--n-600);
+  color: var(--ink-2);
+  background: rgba(255, 255, 255, 0.03);
+}
+.hud-chip--warn b {
+  color: inherit;
+  opacity: 0.75;
+}
+/* Only the reconnect chip is interactive. */
+button.hud-chip {
+  cursor: pointer;
+  transition: background var(--t-fast) var(--ease-out);
+}
+button.hud-chip:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--ink);
+}
+
+.hud-clock {
+  font: 400 9px/1 var(--font-mono);
+  letter-spacing: 0.14em;
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Toasts ───────────────────────────────────────────────── */
+/* Directly under the HUD chips, in the same column. Notices used to be panes —
+   solved into a slot, tethered to the blob, foldable into a deck. They are
+   chrome, so they live with the chrome now.
+   Not built on .glass: that primitive owns its own radius and hairline edge,
+   and a toast is too small to carry an 18px corner or a specular sweep. */
+.toasts {
+  position: fixed;
+  top: 46px;
+  right: 20px;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  /* Newest at the bottom, so nothing already on screen shifts as one arrives. */
+  gap: 7px;
+  /* The column must not eat clicks meant for the canvas behind it. */
+  pointer-events: none;
+  max-width: min(340px, calc(100vw - 40px));
+}
+
+.toast {
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  text-align: left;
+  padding: 9px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(18, 20, 23, 0.72);
+  backdrop-filter: blur(18px) saturate(115%) brightness(1.35);
+  -webkit-backdrop-filter: blur(18px) saturate(115%) brightness(1.35);
+  box-shadow: 0 8px 24px -8px rgba(0, 0, 0, 0.7);
+  cursor: pointer;
+  animation: toast-in 320ms var(--ease-out) both;
+  transition: border-color var(--t-fast) var(--ease-out);
+}
+.toast:hover {
+  border-color: rgba(255, 255, 255, 0.18);
+}
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateX(12px);
+  }
+}
+
+.toast__text {
+  font-size: 12.5px;
+  line-height: 1.4;
+  color: var(--ink-2);
+}
+.toast__detail {
+  font: 400 10px/1.45 var(--font-mono);
+  color: var(--ink-4);
+  overflow-wrap: anywhere;
+}
+
+/* Tone is carried by the whole edge, matching .hud-chip--warn rather than
+   inventing a second vocabulary two feet away from it. */
+.toast[data-tone='warn'] {
+  border-color: var(--n-600);
+  background: rgba(35, 39, 45, 0.72);
+}
+.toast[data-tone='ok'] {
+  border-color: rgba(10, 132, 255, 0.3);
+}
