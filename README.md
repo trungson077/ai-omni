@@ -167,14 +167,26 @@ No detector is constructed at all. The mic button is the only way into a turn,
 and it owns the microphone's lifetime:
 
 ```
-press mic  →  you speak  →  silence ends it  →  text to Hermes
-           →  reply spoken  →  mic closed, waiting for the next press
+press mic  ┌→ you speak → silence sends it → reply spoken ─┐
+   (once)  └──────────  mic re-opens itself  ─────────────┘
+press mic  →  off
 ```
 
-**Press, speak, stop.** Falling silent for `UTTERANCE_SILENCE_MS` is the only
-thing that sends. Pressing the button again is a *stop*, and it discards the
-capture rather than submitting it. Press and say nothing and it re-arms after
-`UTTERANCE_NO_SPEECH_MS` without calling ElevenLabs at all.
+**A latch, not a push-to-talk.** One press and it stays on: each silence of
+`UTTERANCE_SILENCE_MS` sends what you just said, and once Nova has finished
+replying the microphone opens again on its own for the next thing. You press it
+a second time to turn it off, not to send.
+
+Falling silent is the *only* thing that submits. Pressing off is a stop and it
+discards the capture. Saying nothing at all re-arms after
+`UTTERANCE_NO_SPEECH_MS` without calling ElevenLabs.
+
+The capture still closes between turns — the server discards audio while BUSY,
+and an open microphone would record Nova's reply back into the next utterance —
+so the latch is what re-opens it. It waits for two things: the server back in
+`ARMED`, *and* playback actually finished. `wake.rearm` alone is not enough,
+since it only waits out `REARM_DELAY_MS` after the last sentence was **sent**,
+while the audio for it is still playing in the browser.
 
 Between turns the capture is *closed*, so the tab's recording indicator is dark
 whenever Nova is not being spoken to. Pressing mic brings the session up on its

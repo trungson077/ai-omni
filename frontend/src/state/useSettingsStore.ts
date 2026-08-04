@@ -19,12 +19,23 @@ interface SettingsState {
    * control that sets it is disabled while `sessionOn`.
    */
   mode: VoiceMode
+  /**
+   * The mic toggle is engaged (mic mode only).
+   *
+   * Distinct from "a capture is open right now", which is what the wire
+   * reports. This is the latch: it survives the whole turn — send, reply,
+   * re-arm — and re-opens the microphone for the next thing you say. Without
+   * it the control would be a push-to-talk you had to press for every single
+   * utterance, which is not what a toggle is.
+   */
+  micLatched: boolean
   /** Play the audio the server sends. */
   ttsOn: boolean
   /** This browser can capture 16kHz PCM at all. */
   captureSupported: boolean
   reducedMotion: boolean
   setSession: (v: boolean) => void
+  setMicLatched: (v: boolean) => void
   setMode: (m: VoiceMode) => void
   setTts: (v: boolean) => void
   setReducedMotion: (v: boolean) => void
@@ -47,12 +58,14 @@ function captureSupported(): boolean {
 export const useSettingsStore = create<SettingsState>((set) => ({
   sessionOn: false,
   mode: 'wake',
+  micLatched: false,
   ttsOn: true,
   captureSupported: captureSupported(),
   reducedMotion:
     typeof matchMedia === 'function' &&
     matchMedia('(prefers-reduced-motion: reduce)').matches,
   setSession: (sessionOn) => set({ sessionOn }),
+  setMicLatched: (micLatched) => set({ micLatched }),
   setMode: (mode) => set({ mode }),
   setTts: (ttsOn) => set({ ttsOn }),
   setReducedMotion: (reducedMotion) => set({ reducedMotion }),

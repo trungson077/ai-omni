@@ -21,7 +21,8 @@ import {
 } from './flags'
 import { createStateGate } from './gate'
 import type { ServerMsg, VoiceMode } from './protocol'
-import { install, sendApproval, stopCapture } from './socket'
+import { install, sendApproval, sendTalk, startCapture, stopCapture } from './socket'
+import { useSettingsStore } from '../state/useSettingsStore'
 
 /**
  * The voice socket, translated into NovaEvents.
@@ -370,6 +371,39 @@ function handle(msg: ServerMsg) {
 
   update(next)
   if (captureEnded) stopCapture()
+  // The other half of the latch: a turn just ended, so open the next one.
+  reopenIfLatched()
+}
+
+/**
+ * Re-opens the microphone for the next turn of a latched mic-mode session.
+ *
+ * This is what makes the mic control a toggle rather than a push-to-talk: the
+ * capture is closed at the end of every turn (the server discards audio while
+ * BUSY, and leaving it open would record Nova's own reply straight back into
+ * the next utterance), so something has to open the next one, and the latch is
+ * the standing instruction to do exactly that.
+ *
+ * Both conditions matter. ARMED means the server is ready for another turn.
+ * Not `speaking` means she has actually finished — `wake.rearm` only waits out
+ * REARM_DELAY_MS after the last sentence was *sent*, and the audio for it is
+ * still playing in the browser well after that, so re-opening on the message
+ * alone would put a live microphone in front of a speaker mid-sentence.
+ *
+ * Idempotent: startCapture is a no-op once a capture exists, and the server
+ * ignores `talk` while already CAPTURING.
+ */
+function reopenIfLatched() {
+  if (flags.mode !== 'mic') return
+  if (flags.socket !== 'open') return
+  if (flags.wakePhase !== 'armed') return
+  if (flags.speaking) return
+  if (!useSettingsStore.getState().micLatched) return
+  void startCapture().then((ok) => {
+    // Re-check: the latch can be released, or a turn can start, during the
+    // getUserMedia round trip.
+    if (ok && useSettingsStore.getState().micLatched) sendTalk(true)
+  })
 }
 
 /**
@@ -384,7 +418,13 @@ export function setMode(mode: VoiceMode) {
 /** Wires the socket to the bus. Call once, at module init. */
 export function installAdapter(): TtsPlayer {
   player = createTtsPlayer({
-    onSpeakingChange: (speaking) => update({ ...flags, speaking }),
+    onSpeakingChange: (speaking) => {
+      update({ ...flags, speaking })
+      // Usually the later of the two triggers: the server re-arms while the
+      // last sentences are still playing, so this is the moment a latched
+      // microphone can safely open without hearing her.
+      reopenIfLatched()
+    },
     onBlockedChange: (audioBlocked) => update({ ...flags, audioBlocked }),
     onDecodeError: (err) =>
       toast('A sentence of Nova’s reply could not be decoded.', {

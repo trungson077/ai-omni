@@ -27,6 +27,7 @@ export function armSession() {
 
 export function disarmSession() {
   player.flush()
+  useSettingsStore.getState().setMicLatched(false)
   useSettingsStore.getState().setSession(false)
 }
 
@@ -56,25 +57,39 @@ export function toggleWake() {
 /**
  * The microphone control, for both places that offer it.
  *
- * What the second press means differs, and that is the mode's whole character.
- * In wake mode the capture is hand-driven: the server turns its endpointer off,
- * so pressing again is the only thing that ends it. In mic mode the endpointer
- * runs — you press, speak, stop, and it sends itself — so pressing again is an
- * early send rather than the only way out.
+ * The two modes make it a different kind of control, and that is the point.
+ *
+ * Wake mode: a hand-driven capture. The server turns its endpointer off, so
+ * pressing again is the only thing that ends it, and it sends.
+ *
+ * Mic mode: a latch, not a push-to-talk. One press opens it and it *stays*
+ * open across turns — you speak, the silence sends it, Nova replies, and it
+ * re-opens for the next thing you say without being pressed again. The latch is
+ * what survives that round trip; see `micLatched`. Pressing again releases it,
+ * and releasing discards whatever was captured rather than sending it, since
+ * the endpointer is the only thing that submits here.
  *
  * `talking` is the current state, read off the wire rather than from a local
  * flag: the server is free to refuse, and a control that toggled on its own
  * would be claiming a capture that never opened.
  */
 export function toggleTalk(talking: boolean) {
-  const { mode, sessionOn, captureSupported } = useSettingsStore.getState()
+  const s = useSettingsStore.getState()
+  const { mode, sessionOn, captureSupported, micLatched } = s
+
+  // Releasing the latch. Covers the mid-turn case too: Nova may be thinking or
+  // speaking with no capture open, and this is how you say "stop listening"
+  // before she comes back around for the next one.
+  if (sessionOn && mode === 'mic' && micLatched) {
+    s.setMicLatched(false)
+    if (talking) sendTalk(false)
+    stopCapture()
+    return
+  }
 
   if (talking) {
+    // Wake mode's hand-driven capture: this press is the send.
     sendTalk(false)
-    // Order matters only for honesty, not correctness: the server has every
-    // frame it is going to get, so closing the microphone after telling it we
-    // are done just means the recording indicator goes dark a beat sooner.
-    if (mode === 'mic') stopCapture()
     return
   }
 
@@ -93,9 +108,10 @@ export function toggleTalk(talking: boolean) {
   // Otherwise this press owns the session. Down means mic mode, whatever the
   // last one was; sendTalk holds the open until the socket lands.
   if (!sessionOn) {
-    useSettingsStore.getState().setMode('mic')
-    useSettingsStore.getState().setSession(true)
+    s.setMode('mic')
+    s.setSession(true)
   }
+  s.setMicLatched(true)
   void startCapture().then((ok) => {
     if (ok) sendTalk(true)
   })

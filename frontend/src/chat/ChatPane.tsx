@@ -84,7 +84,7 @@ function Composer() {
   const socket = useWireStore((s) => s.flags.socket)
   const wakePhase = useWireStore((s) => s.flags.wakePhase)
   const micState = useWireStore((s) => s.flags.mic)
-  const { sessionOn, mode, ttsOn, setTts, captureSupported } = useSettingsStore()
+  const { sessionOn, mode, micLatched, ttsOn, setTts, captureSupported } = useSettingsStore()
   const taRef = useRef<HTMLTextAreaElement>(null)
 
   // Grow with content, up to the CSS max-height.
@@ -108,14 +108,20 @@ function Composer() {
   // free to refuse (it ignores `talk` while BUSY), and a button that lit up on
   // its own would be claiming a capture that never opened.
   const talking = wakePhase === 'capturing'
-  // Both mode controls are self-sufficient — either brings a session up — so a
-  // down session is no reason to disable them. What neither can do is
-  // interrupt: the server discards the microphone while BUSY.
-  const talkDisabled = !captureSupported || wakePhase === 'busy' || (sessionOn && mode === 'wake' && !live)
   const wakeArmed = sessionOn && mode === 'wake'
   // Whether the endpointer will close this capture on its own. True for every
   // mic-mode capture; false for a wake-mode talk capture, which is hand-driven.
-  const micEndpointed = !sessionOn || mode === 'mic'
+  const micEndpointed = !wakeArmed
+  // The mic toggle is engaged and will keep re-opening between turns. Distinct
+  // from `talking`, which is only "a capture is open this instant".
+  const latched = sessionOn && mode === 'mic' && micLatched
+  // Both mode controls are self-sufficient — either brings a session up — so a
+  // down session is no reason to disable them. BUSY normally does disable,
+  // since the server discards the microphone while answering; the exception is
+  // a live latch, which must stay releasable mid-turn.
+  const talkDisabled =
+    !captureSupported ||
+    (wakeArmed ? !live || wakePhase === 'busy' : wakePhase === 'busy' && !latched)
 
   return (
     <div className="composer">
@@ -193,21 +199,28 @@ function Composer() {
         >
           <WaveIcon />
         </button>
+        {/* Three states, not two. `live` is a capture open this instant; `on`
+            is the latch held between turns, while Nova is thinking or speaking
+            and the microphone is legitimately shut. Collapsing those two would
+            make the toggle look like it had switched itself off every turn. */}
         <button
-          className={clsx('composer__btn composer__btn--talk', talking && 'composer__btn--live')}
+          className={clsx(
+            'composer__btn composer__btn--talk',
+            talking ? 'composer__btn--live' : latched && 'composer__btn--on',
+          )}
           onClick={() => toggleTalk(talking)}
           disabled={talkDisabled}
           title={
-            talking
-              ? micEndpointed
-                ? 'Stop — discards this capture. It sends itself when you stop talking'
-                : 'Send what you just said'
-              : micEndpointed
-                ? 'Mic — press, speak, and it sends when you stop talking'
+            !micEndpointed
+              ? talking
+                ? 'Send what you just said'
                 : 'Talk — without the wake word'
+              : latched
+                ? 'Mic on — keeps listening between turns. Press to turn it off'
+                : 'Mic — press once, then just talk. Each silence sends'
           }
-          aria-pressed={talking}
-          aria-label={talking ? 'Finish speaking' : 'Talk to Nova'}
+          aria-pressed={talking || latched}
+          aria-label={latched ? 'Turn the microphone off' : 'Turn the microphone on'}
         >
           <MicIcon />
         </button>

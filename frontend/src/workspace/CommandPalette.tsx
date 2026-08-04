@@ -24,9 +24,10 @@ export function CommandPalette({ onClose }: Props) {
   const [active, setActive] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
   const panes = usePaneStore((s) => s.panes)
-  const { sessionOn, mode, ttsOn, setTts, captureSupported } = useSettingsStore()
+  const { sessionOn, mode, micLatched, ttsOn, setTts, captureSupported } = useSettingsStore()
   const talking = useWireStore((s) => s.flags.wakePhase === 'capturing')
   const wakeArmed = sessionOn && mode === 'wake'
+  const latched = sessionOn && mode === 'mic' && micLatched
 
   useEffect(() => {
     inputRef.current?.focus()
@@ -77,9 +78,15 @@ export function CommandPalette({ onClose }: Props) {
       {
         id: 'talk',
         group: 'Controls',
-        label: talking ? (wakeArmed ? 'Finish speaking' : 'Stop the mic') : 'Talk to Nova',
+        label: wakeArmed
+          ? talking
+            ? 'Finish speaking'
+            : 'Talk without the wake word'
+          : latched
+            ? 'Turn the microphone off'
+            : 'Turn the microphone on',
         glyph: '◍',
-        hint: talking && !wakeArmed ? 'discards it' : undefined,
+        hint: latched ? 'keeps listening' : undefined,
         run: () => toggleTalk(talking),
       },
       {
@@ -111,7 +118,7 @@ export function CommandPalette({ onClose }: Props) {
       }))
 
     return [...directives, ...controls, ...focusables]
-  }, [panes, sessionOn, mode, wakeArmed, ttsOn, captureSupported, setTts, talking])
+  }, [panes, sessionOn, mode, wakeArmed, latched, ttsOn, captureSupported, setTts, talking])
 
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase()
