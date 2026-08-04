@@ -39,7 +39,7 @@ WAKEWORD_EMBEDDING_PATH = os.environ.get(
 )
 # Deliberately low: the trained hey_nova model peaks well under openWakeWord's
 # usual 0.5. Raise it if the room triggers false wakes.
-WAKEWORD_THRESHOLD = float(os.environ.get("WAKEWORD_THRESHOLD", 0.001))
+WAKEWORD_THRESHOLD = float(os.environ.get("WAKEWORD_THRESHOLD", 0.002))
 
 # openWakeWord is trained on 16 kHz mono int16 in 80 ms frames.
 WAKEWORD_SAMPLE_RATE = 16000
