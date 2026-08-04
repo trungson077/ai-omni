@@ -77,9 +77,9 @@ export function CommandPalette({ onClose }: Props) {
       {
         id: 'talk',
         group: 'Controls',
-        label: talking ? 'Finish speaking' : 'Talk to Nova',
+        label: talking ? (wakeArmed ? 'Finish speaking' : 'Stop the mic') : 'Talk to Nova',
         glyph: '◍',
-        hint: talking && wakeArmed ? 'or it waits for you' : undefined,
+        hint: talking && !wakeArmed ? 'discards it' : undefined,
         run: () => toggleTalk(talking),
       },
       {

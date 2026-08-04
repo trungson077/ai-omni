@@ -171,10 +171,10 @@ press mic  →  you speak  →  silence ends it  →  text to Hermes
            →  reply spoken  →  mic closed, waiting for the next press
 ```
 
-**Press, speak, stop.** The endpointer runs here exactly as it does after the
-wake word, so falling silent for `UTTERANCE_SILENCE_MS` sends the utterance —
-a second press is an early send, not the only way out. Press and say nothing and
-it re-arms after `UTTERANCE_NO_SPEECH_MS` without calling ElevenLabs at all.
+**Press, speak, stop.** Falling silent for `UTTERANCE_SILENCE_MS` is the only
+thing that sends. Pressing the button again is a *stop*, and it discards the
+capture rather than submitting it. Press and say nothing and it re-arms after
+`UTTERANCE_NO_SPEECH_MS` without calling ElevenLabs at all.
 
 Between turns the capture is *closed*, so the tab's recording indicator is dark
 whenever Nova is not being spoken to. Pressing mic brings the session up on its
@@ -216,14 +216,19 @@ Server-side state machine, one per connection, the same in both modes:
 
 What ends a `CAPTURING` is the one thing that differs:
 
-| Capture                    | Ends on                                          |
-| -------------------------- | ------------------------------------------------ |
-| wake word fired            | `UTTERANCE_SILENCE_MS` of quiet, cap `UTTERANCE_MAX_MS` |
-| mic button, **mic** mode   | `UTTERANCE_SILENCE_MS` of quiet, cap `MANUAL_MAX_MS`    |
-| mic button, **wake** mode  | the second press only, cap `MANUAL_MAX_MS`        |
+| Capture                   | Sends on                                                | Off-press does |
+| ------------------------- | ------------------------------------------------------- | -------------- |
+| wake word fired           | `UTTERANCE_SILENCE_MS` of quiet, cap `UTTERANCE_MAX_MS`  | n/a            |
+| mic button, **mic** mode  | `UTTERANCE_SILENCE_MS` of quiet, cap `MANUAL_MAX_MS`     | **discards it**  |
+| mic button, **wake** mode | the off-press only, cap `MANUAL_MAX_MS`                  | sends          |
 
-Only the last is hand-driven, and deliberately so — it exists for when you want
-to hold the floor. Everything else is endpointed. A capture the server ends on
+In mic mode the endpointer is the *only* thing that submits. Turning the
+microphone off is a stop, and a stop throws the audio away — otherwise off would
+be a second, silent way to send, which is the exact thing you reach for the off
+switch to avoid. Nothing is billed; it never reaches STT.
+
+Only the wake-mode talk capture is hand-driven, deliberately — it exists for
+holding the floor. A capture the server ends on
 its own also closes the microphone client-side in mic mode, keyed on leaving
 `CAPTURING` so no exit path can leave it recording.
 

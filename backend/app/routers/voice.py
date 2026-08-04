@@ -228,15 +228,29 @@ async def ws_voice(websocket: WebSocket):
                                     {"type": "wake.detected", "score": None, "source": "manual"}
                                 )
                         elif state == CAPTURING:
-                            if saw_speech and utter:
+                            # What the off-press means is the whole character of
+                            # the two modes.
+                            #
+                            # Wake mode: the capture is hand-driven, the
+                            # endpointer is off, and this press is the only
+                            # thing that can end it — so it submits.
+                            #
+                            # Mic mode: the endpointer is the only thing that
+                            # submits. Off is a stop, and a stop throws the
+                            # audio away — otherwise turning the microphone off
+                            # would be a second, silent way to send, which is
+                            # the exact thing you reach for the off switch to
+                            # avoid. Nothing is billed: it never reached STT.
+                            if wake_enabled and saw_speech and utter:
                                 state = BUSY
                                 await websocket.send_json({"type": "stt.start"})
                                 await work_q.put(bytes(utter))
                                 utter.clear()
                             else:
-                                # Pressed on and off with nothing said. Don't pay
-                                # for an STT call on silence.
-                                logger.info("[voice] manual capture ended empty")
+                                logger.info(
+                                    "[voice] capture stopped, discarding %d bytes",
+                                    len(utter),
+                                )
                                 reset_detector()
                                 utter.clear()
                                 elapsed_ms = silence_ms = 0

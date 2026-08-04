@@ -200,7 +200,7 @@ function Composer() {
           title={
             talking
               ? micEndpointed
-                ? 'Send now — otherwise it sends when you stop talking'
+                ? 'Stop — discards this capture. It sends itself when you stop talking'
                 : 'Send what you just said'
               : micEndpointed
                 ? 'Mic — press, speak, and it sends when you stop talking'
