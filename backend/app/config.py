@@ -58,3 +58,58 @@ MANUAL_MAX_MS = int(os.environ.get("MANUAL_MAX_MS", 60000))
 # Ignore the mic for a moment after Nova stops talking so her own voice tail
 # cannot re-trigger the wake word.
 REARM_DELAY_MS = int(os.environ.get("REARM_DELAY_MS", 500))
+
+# --- Approvals --------------------------------------------------------------
+# Run every tool call without asking.
+#
+# This removes the only gate between Nova and your machine. Hermes' security
+# scanner still runs, but its verdict is no longer acted on — the `curl | python3`
+# it grades [HIGH] executes, and so does anything else the model reaches for.
+# Turn it back on with NOVA_AUTO_APPROVE=0.
+#
+# Two reasons this is worth having as a flag rather than a code edit: the
+# approval prompt is *spoken* here (voice.py feeds it to TTS), so a blocked turn
+# reads a whole shell heredoc out loud; and answering it needs a click, which
+# defeats a hands-free assistant.
+AUTO_APPROVE = os.environ.get("NOVA_AUTO_APPROVE", "1").strip().lower() not in {
+    "0",
+    "false",
+    "no",
+    "off",
+    "",
+}
+
+# --- Clarify bypass ---------------------------------------------------------
+# Hermes' `clarify` tool asks a question and blocks the agent thread until
+# something calls clarify.respond — for agent.clarify_timeout seconds, an hour
+# by default. Nothing in this app can answer it: there is no clarify surface,
+# and while a turn streams the wire only runs one way. So an ambiguous request
+# parked the whole session on "running clarify" with no way out but to wait.
+#
+# We answer the instant it arrives and push the question into Nova's spoken
+# reply instead, which is the right place for it anyway — the user is talking,
+# not clicking, and can just answer out loud.
+#
+# The wording is an instruction to the model, because that is what the tool
+# hands back: clarify returns {"user_response": <this text>}, so it lands in the
+# transcript as if the user had said it. It deliberately does not name a
+# language — Nova should ask in whatever language the conversation is already
+# using.
+CLARIFY_BYPASS_ANSWER = os.environ.get(
+    "NOVA_CLARIFY_BYPASS_ANSWER",
+    "The clarify tool cannot reach the user in this session and returned no "
+    "answer. Do not call it again this turn. Ask your question directly in "
+    "your reply instead — one short sentence, in the language the user is "
+    "speaking — then stop and wait for them to answer out loud.",
+)
+# After this many clarify calls in one turn the instruction above is clearly not
+# landing, so stop being polite about it. Without a ceiling a model that reaches
+# for clarify on every rejection can spin here, and each round is a full model
+# call the user waits through.
+CLARIFY_BYPASS_LIMIT = int(os.environ.get("NOVA_CLARIFY_BYPASS_LIMIT", 3))
+CLARIFY_BYPASS_FINAL = os.environ.get(
+    "NOVA_CLARIFY_BYPASS_FINAL",
+    "clarify is disabled in this session and will never return an answer. "
+    "Stop calling it. Reply to the user in words now, asking for whatever you "
+    "still need to know.",
+)

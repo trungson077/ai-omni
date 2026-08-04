@@ -13,6 +13,38 @@ import { acquire, captureAnalyser, release, sendTalk, startCapture, stopCapture 
 export const player: TtsPlayer = installAdapter()
 
 /**
+ * Let the *first* interaction anywhere unlock audio playback.
+ *
+ * The session now comes up on load (see autoConnect), but no amount of code can
+ * resume an AudioContext outside a user gesture — so without this Nova would
+ * listen and reply from the very first word while staying silent, and the only
+ * cure would be hunting for the one control that happens to call unlock().
+ * Any click or keypress will do instead.
+ *
+ * Registered at module scope for the same reason the player is: StrictMode's
+ * double-mount must not install two of them. `once` per event and the
+ * `player.blocked` re-check keep it from fighting a real unlock that already
+ * happened via a button.
+ */
+function installAudioUnlock() {
+  if (typeof window === 'undefined') return
+  // Capture phase, so a handler that stops propagation cannot swallow the
+  // unlock. removeEventListener only matches a listener registered with the
+  // same capture flag, so it has to be passed on the way out too.
+  const opts = { capture: true } as const
+  const unlock = () => {
+    if (player.blocked) player.unlock()
+    // Whichever event fired first, drop both — this is a one-shot.
+    window.removeEventListener('pointerdown', unlock, opts)
+    window.removeEventListener('keydown', unlock, opts)
+  }
+  window.addEventListener('pointerdown', unlock, opts)
+  window.addEventListener('keydown', unlock, opts)
+}
+
+installAudioUnlock()
+
+/**
  * Brings the session up. Must be called inside a user gesture, synchronously.
  *
  * The ordering is the whole trick: `unlock()` has to happen before the first

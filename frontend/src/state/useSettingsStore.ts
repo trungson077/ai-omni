@@ -55,8 +55,29 @@ function captureSupported(): boolean {
   )
 }
 
+/**
+ * Bring the session up on load rather than on a click.
+ *
+ * A hands-free assistant that needs a click before it will listen is not
+ * hands-free. Gated on `captureSupported` because a session in wake mode with
+ * no microphone can never produce a turn, and skipped for ?wire=fake so the
+ * replay fixtures still start from a cold, deliberate state.
+ *
+ * What this *cannot* do is unlock audio playback: browsers only resume an
+ * AudioContext inside a user gesture, so Nova can listen immediately but stays
+ * mute until the first interaction anywhere on the page. See installAudioUnlock.
+ * Set ?autoconnect=0 to opt out.
+ */
+function autoConnect(): boolean {
+  if (typeof window === 'undefined') return false
+  const params = new URLSearchParams(location.search)
+  if (params.get('autoconnect') === '0') return false
+  if (params.get('wire') === 'fake') return false
+  return captureSupported()
+}
+
 export const useSettingsStore = create<SettingsState>((set) => ({
-  sessionOn: false,
+  sessionOn: autoConnect(),
   mode: 'wake',
   micLatched: false,
   ttsOn: true,

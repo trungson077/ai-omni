@@ -3,9 +3,12 @@
 Hermes spawns this process, so the tools always exist even when the camera
 service is down; the first call boots the service on demand.
 
-Register once with:
-    hermes mcp add god-eye --command uv \
-        --args run --directory /Users/sonnt/Desktop/ytb/AIOmni/camera python mcp_god_eye.py
+Register with `make mcp-register` from the repo root, never by hand: Hermes
+stores the spawn command as an absolute path in ~/.hermes/config.yaml, so a
+checkout that moves leaves Hermes pointing at the old directory. It then fails
+to spawn this process, Nova silently loses all three god_eye tools, and the
+only symptom is that asking for the camera does nothing at all. The make target
+re-derives the path from wherever the repo actually is.
 """
 
 import asyncio

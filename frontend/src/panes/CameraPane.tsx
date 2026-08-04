@@ -53,6 +53,7 @@ export function CameraPane({ payload }: KindProps) {
   // matching ?t= makes the browser open a fresh request instead of reusing a
   // connection that may already be dead.
   const key = `${p.nonce}:${attempt}`
+  const src = cameraUrl(`${p.src}?t=${key}`)
 
   // Dropping an <img> from the DOM does not deterministically close its socket —
   // the browser may hold it until GC. Clearing src aborts it now, which is what
@@ -60,13 +61,27 @@ export function CameraPane({ payload }: KindProps) {
   // hogging one of the six per-host slots after the pane is gone.
   useEffect(() => {
     const el = imgRef.current
+    if (!el) return
+    // Re-assert the URL instead of trusting the JSX src alone.
+    //
+    // The teardown below points this element at a data URI, and React will not
+    // undo that: the `src` prop it rendered never changed, so it sees nothing
+    // to update. StrictMode runs every effect setup/cleanup/setup on mount, so
+    // in development that teardown fires against the *live* element — leaving
+    // the pane parked on a 1x1 GIF, with no request for the stream ever made
+    // and no error to explain it.
+    //
+    // Comparing the attribute, not `el.src`: the property getter returns an
+    // absolute URL, so it never equals the proxy-relative string and every
+    // setup would restart the connection.
+    if (el.getAttribute('src') !== src) el.src = src
     return () => {
       // Pointing at a data URI rather than clearing src: an empty string can
       // re-resolve to the page URL and fire a bogus request, and it leaves the
       // proxy answering a request the browser has already abandoned.
-      if (el) el.src = BLANK_GIF
+      el.src = BLANK_GIF
     }
-  }, [key])
+  }, [src])
 
   useEffect(() => {
     let cancelled = false
@@ -146,7 +161,7 @@ export function CameraPane({ payload }: KindProps) {
               ref={imgRef}
               key={key}
               className="pk-camera__img"
-              src={cameraUrl(`${p.src}?t=${key}`)}
+              src={src}
               // Empty alt, deliberately: the placeholder below is the accessible
               // description, and a non-empty alt renders as fallback text the
               // moment a frame fails to decode.
