@@ -145,10 +145,15 @@ one with a differently-configured instance.
 Both run on **one socket** — `/api/ws/voice` — and one capture path. The mode
 rides in the query string as `?mode=mic|wake`, because the server decides whether
 to load the wake model at accept time, before any client frame exists to carry
-the choice. That also makes it fixed for the life of a session: the toggle in the
-composer foot (**wake word · on/off**) is disabled while connected, since
-changing it means a new socket, and a new socket is a new Hermes session with no
-memory of the last one.
+the choice.
+
+Each mode has its own button in the composer, and neither is behind the other or
+behind power: **◈ wake word** and **◍ mic** each bring a session up in their own
+mode, and the one you press is the one you get. Power is only the connection —
+needed to *end* a session, never to start one. Because the mode is read at
+accept time it is fixed for the life of a session, so the other mode's button is
+disabled while one is up rather than silently reconnecting into a fresh Hermes
+session with no memory of the last.
 
 The browser streams **raw 16 kHz mono int16 PCM** and does nothing else.
 `frontend/src/audio/pcmCapture.ts` opens an `AudioContext` at 16 kHz (letting the
@@ -158,15 +163,23 @@ produces compressed webm, and the detector needs samples.
 
 ### Pure mic — `?mode=mic`
 
-No detector is constructed at all. The talk control is the only way into a turn,
-and it owns the microphone's lifetime: press to open it, press again to send.
-Between turns the capture is *closed*, so the tab's recording indicator is dark
-whenever Nova is not being spoken to.
+No detector is constructed at all. The mic button is the only way into a turn,
+and it owns the microphone's lifetime:
 
-Nothing is behind the power button here. Pressing talk brings the session up on
-its own if it is down, and the `talk` is held and replayed on connect — power is
-only ever needed to end a session. A missing or broken wake model cannot affect
-this mode, which is the point of it.
+```
+press mic  →  you speak  →  silence ends it  →  text to Hermes
+           →  reply spoken  →  mic closed, waiting for the next press
+```
+
+**Press, speak, stop.** The endpointer runs here exactly as it does after the
+wake word, so falling silent for `UTTERANCE_SILENCE_MS` sends the utterance —
+a second press is an early send, not the only way out. Press and say nothing and
+it re-arms after `UTTERANCE_NO_SPEECH_MS` without calling ElevenLabs at all.
+
+Between turns the capture is *closed*, so the tab's recording indicator is dark
+whenever Nova is not being spoken to. Pressing mic brings the session up on its
+own if it is down, and the `talk` is held and replayed on connect. A missing or
+broken wake model cannot affect this mode, which is the point of it.
 
 ### Wake word — `?mode=wake`
 
@@ -182,8 +195,11 @@ otherwise. Detection *and* the decision about when you stopped talking both
 happen on the server, because openWakeWord is a Python model and the endpointer
 needs the same samples the detector is already reading.
 
-The talk control is still there as a second way in, for when saying it out loud
-is the wrong move or the detector simply didn't hear you.
+The mic button is still there as a second way in, for when saying it out loud is
+the wrong move or the detector simply didn't hear you. That capture is
+**hand-driven**, unlike a mic-mode one: the server turns the endpointer off, so
+a silence is a pause for thought rather than a full stop, and only the second
+press ends it.
 
 > `/api/ws/stt` is a dead route from the pre-rewrite build — nothing reaches it.
 > It speaks none of the current wire's vocabulary (`wake.*`, `stt.start`) and its
@@ -198,11 +214,18 @@ Server-side state machine, one per connection, the same in both modes:
 | `CAPTURING` | Accumulate the utterance, watch for the end                          |
 | `BUSY`      | Transcribing / asking Hermes / speaking — **mic discarded**          |
 
-What ends a `CAPTURING` differs. A wake-word capture is closed by the endpointer
-after `UTTERANCE_SILENCE_MS` of quiet. A talk capture has the endpointer turned
-off — a silence there is a pause for thought, not a full stop — so only the
-second press ends it, bounded by `MANUAL_MAX_MS`. Every capture in mic mode is a
-talk capture.
+What ends a `CAPTURING` is the one thing that differs:
+
+| Capture                    | Ends on                                          |
+| -------------------------- | ------------------------------------------------ |
+| wake word fired            | `UTTERANCE_SILENCE_MS` of quiet, cap `UTTERANCE_MAX_MS` |
+| mic button, **mic** mode   | `UTTERANCE_SILENCE_MS` of quiet, cap `MANUAL_MAX_MS`    |
+| mic button, **wake** mode  | the second press only, cap `MANUAL_MAX_MS`        |
+
+Only the last is hand-driven, and deliberately so — it exists for when you want
+to hold the floor. Everything else is endpointed. A capture the server ends on
+its own also closes the microphone client-side in mic mode, keyed on leaving
+`CAPTURING` so no exit path can leave it recording.
 
 `BUSY` throws audio away deliberately. Without it Nova's own voice returns
 through the microphone, re-triggers the wake word, and corrupts the next

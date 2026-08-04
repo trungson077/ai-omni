@@ -31,12 +31,36 @@ export function disarmSession() {
 }
 
 /**
- * The talk control, for both places that offer it.
+ * The wake-word control. Neither mode button is behind the other, or behind the
+ * power button: each brings a session up in its own mode.
  *
- * In wake mode this is one of two ways in, and the capture is already running —
- * so it is nothing but a message. In mic mode it is the whole interaction: it
- * brings the session up if it is down, owns the microphone's lifetime, and is
- * the only thing that ever opens a capture.
+ * Pressing this while a mic-mode session is up is a no-op rather than a silent
+ * reconnect — the server reads the mode at accept time, so switching would
+ * throw away the Hermes conversation. The button reports that instead.
+ */
+export function toggleWake() {
+  const { sessionOn, mode, captureSupported } = useSettingsStore.getState()
+  if (!captureSupported) return
+
+  if (sessionOn) {
+    // Own mode: this is the off switch. Other mode: not ours to end.
+    if (mode === 'wake') disarmSession()
+    return
+  }
+  // Same unlock ordering as armSession — before the first await.
+  player.unlock()
+  useSettingsStore.getState().setMode('wake')
+  useSettingsStore.getState().setSession(true)
+}
+
+/**
+ * The microphone control, for both places that offer it.
+ *
+ * What the second press means differs, and that is the mode's whole character.
+ * In wake mode the capture is hand-driven: the server turns its endpointer off,
+ * so pressing again is the only thing that ends it. In mic mode the endpointer
+ * runs — you press, speak, stop, and it sends itself — so pressing again is an
+ * early send rather than the only way out.
  *
  * `talking` is the current state, read off the wire rather than from a local
  * flag: the server is free to refuse, and a control that toggled on its own
@@ -59,14 +83,19 @@ export function toggleTalk(talking: boolean) {
   // before the first await in the gesture's task.
   player.unlock()
 
-  if (mode === 'wake') {
+  // An up wake-mode session already has the microphone open; this is just the
+  // second way in, so it is nothing but a message.
+  if (sessionOn && mode === 'wake') {
     sendTalk(true)
     return
   }
 
-  // Mic mode. Nothing is behind the power button here: pressing talk is what
-  // brings the session up, and sendTalk holds the open until the socket lands.
-  if (!sessionOn) useSettingsStore.getState().setSession(true)
+  // Otherwise this press owns the session. Down means mic mode, whatever the
+  // last one was; sendTalk holds the open until the socket lands.
+  if (!sessionOn) {
+    useSettingsStore.getState().setMode('mic')
+    useSettingsStore.getState().setSession(true)
+  }
   void startCapture().then((ok) => {
     if (ok) sendTalk(true)
   })

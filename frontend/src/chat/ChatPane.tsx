@@ -8,7 +8,7 @@ import { Markdown } from './Markdown'
 import { Waveform } from './Waveform'
 import { SUGGESTIONS, submitUtterance } from '../wire/submit'
 import { stripSentinels } from '../wire/sentinels'
-import { armSession, disarmSession, toggleTalk } from '../wire/useWire'
+import { armSession, disarmSession, toggleTalk, toggleWake } from '../wire/useWire'
 import './ChatPane.css'
 
 /* ── Messages ─────────────────────────────────────────────── */
@@ -84,7 +84,7 @@ function Composer() {
   const socket = useWireStore((s) => s.flags.socket)
   const wakePhase = useWireStore((s) => s.flags.wakePhase)
   const micState = useWireStore((s) => s.flags.mic)
-  const { sessionOn, mode, setMode, ttsOn, setTts, captureSupported } = useSettingsStore()
+  const { sessionOn, mode, ttsOn, setTts, captureSupported } = useSettingsStore()
   const taRef = useRef<HTMLTextAreaElement>(null)
 
   // Grow with content, up to the CSS max-height.
@@ -108,10 +108,14 @@ function Composer() {
   // free to refuse (it ignores `talk` while BUSY), and a button that lit up on
   // its own would be claiming a capture that never opened.
   const talking = wakePhase === 'capturing'
-  // In mic mode the talk control is self-sufficient — it brings the session up
-  // itself — so a down session is no reason to disable it. What it cannot do in
-  // either mode is interrupt: the server discards the microphone while BUSY.
-  const talkDisabled = !captureSupported || wakePhase === 'busy' || (mode === 'wake' && !live)
+  // Both mode controls are self-sufficient — either brings a session up — so a
+  // down session is no reason to disable them. What neither can do is
+  // interrupt: the server discards the microphone while BUSY.
+  const talkDisabled = !captureSupported || wakePhase === 'busy' || (sessionOn && mode === 'wake' && !live)
+  const wakeArmed = sessionOn && mode === 'wake'
+  // Whether the endpointer will close this capture on its own. True for every
+  // mic-mode capture; false for a wake-mode talk capture, which is hand-driven.
+  const micEndpointed = !sessionOn || mode === 'mic'
 
   return (
     <div className="composer">
@@ -168,17 +172,38 @@ function Composer() {
         >
           <PowerIcon />
         </button>
-        {/* The server turns its endpointer off for a talk capture, so the
-            second press is the only thing that ends it. */}
+        {/* The two modes, as two controls. Neither is behind the other or
+            behind power — each brings a session up in its own mode, and the one
+            you press is the one you get. */}
+        <button
+          className={clsx('composer__btn composer__btn--wake', wakeArmed && 'composer__btn--on')}
+          onClick={toggleWake}
+          disabled={!captureSupported || (sessionOn && mode === 'mic')}
+          title={
+            !captureSupported
+              ? 'Microphone capture unavailable in this browser'
+              : sessionOn && mode === 'mic'
+                ? 'Disconnect first — the mode is fixed for the life of a session'
+                : wakeArmed
+                  ? 'Wake word armed — say “hey nova”. Press to stop listening'
+                  : 'Wake word — listens for “hey nova” for the whole session'
+          }
+          aria-pressed={wakeArmed}
+          aria-label={wakeArmed ? 'Stop listening for the wake word' : 'Listen for the wake word'}
+        >
+          <WaveIcon />
+        </button>
         <button
           className={clsx('composer__btn composer__btn--talk', talking && 'composer__btn--live')}
           onClick={() => toggleTalk(talking)}
           disabled={talkDisabled}
           title={
             talking
-              ? 'Send what you just said'
-              : mode === 'mic'
-                ? 'Talk — opens the mic for as long as you hold the turn'
+              ? micEndpointed
+                ? 'Send now — otherwise it sends when you stop talking'
+                : 'Send what you just said'
+              : micEndpointed
+                ? 'Mic — press, speak, and it sends when you stop talking'
                 : 'Talk — without the wake word'
           }
           aria-pressed={talking}
@@ -204,30 +229,6 @@ function Composer() {
           <b>⌘K</b> palette
         </span>
         <span className="composer__spacer" />
-        {/* The mode, phrased as the thing it actually switches. Off is the pure
-            mic toggle: no detector is loaded at all, and the microphone only
-            opens while the talk control is engaged.
-
-            Disabled while connected because the server reads the mode at accept
-            time, so changing it means a new socket — and a new socket is a new
-            Hermes session with no memory of this one. Better to make that the
-            user's deliberate act than a side effect of flipping a switch. */}
-        <button
-          className="composer__kbd"
-          onClick={() => setMode(mode === 'wake' ? 'mic' : 'wake')}
-          disabled={sessionOn}
-          style={{ color: mode === 'wake' ? 'var(--acc)' : undefined }}
-          title={
-            sessionOn
-              ? 'Disconnect first — the mode is fixed for the life of a session'
-              : mode === 'wake'
-                ? 'Wake word armed for the whole session'
-                : 'Pure mic toggle — nothing listens until you press talk'
-          }
-          aria-pressed={mode === 'wake'}
-        >
-          wake word · <b>{mode === 'wake' ? 'on' : 'off'}</b>
-        </button>
         <button
           className="composer__kbd"
           onClick={() => setTts(!ttsOn)}
@@ -261,6 +262,20 @@ function PowerIcon() {
         strokeLinecap="round"
       />
       <path d="M7 1.4v5" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+/** The wake word: something heard across a room, rather than spoken into. */
+function WaveIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 14 14" fill="none" aria-hidden>
+      <path
+        d="M7 4v6M4.6 5.4v3.2M2.2 6.3v1.4M9.4 5.4v3.2M11.8 6.3v1.4"
+        stroke="currentColor"
+        strokeWidth="1.1"
+        strokeLinecap="round"
+      />
     </svg>
   )
 }

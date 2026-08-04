@@ -13,6 +13,10 @@ frame exists to carry the choice:
     mic   no detector is constructed at all. The `talk` command is the only way
           into a capture, and the browser only streams while one is open.
 
+The endpointer runs in both modes: press, speak, fall silent, and the utterance
+is sent. The one exception is a `talk` capture in *wake* mode, which is
+hand-driven on purpose — see `hand_driven` below.
+
 State machine per connection, in both modes:
 
     ARMED     wake: feed PCM to openWakeWord.  mic: nothing is listening.
@@ -202,8 +206,10 @@ async def ws_voice(websocket: WebSocket):
                     if cmd_type == "talk":
                         # In wake mode this is the second way into a turn, for
                         # when saying it out loud is the wrong move or the
-                        # detector simply didn't hear you. In mic mode it is the
-                        # only way in — nothing else ever leaves ARMED.
+                        # detector simply didn't hear you, and it is hand-driven
+                        # end to end. In mic mode it is the only way in, and
+                        # only the *open* half is pressed in the normal case —
+                        # the endpointer closes it when you stop talking.
                         if cmd.get("on", True):
                             # Ignored while BUSY on purpose: the mic is being
                             # discarded anyway, so opening a capture here would
@@ -282,26 +288,42 @@ async def ws_voice(websocket: WebSocket):
                 elif saw_speech:
                     silence_ms += chunk_ms
 
+                # Who decides the utterance is over.
+                #
+                # A talk capture in *wake* mode is explicitly hand-driven: it
+                # exists for when the wake word is the wrong move, the person is
+                # holding the control, and a silence there is a pause for
+                # thought rather than a full stop. Cutting in after 1.2s of it
+                # would make the button feel broken.
+                #
+                # Mic mode is the opposite by design: pressing the control is
+                # how you start and falling silent is how you finish, so the
+                # endpointer runs for every capture exactly as it does after the
+                # wake word. A second press is then an early send, not the only
+                # way out.
+                hand_driven = manual and wake_enabled
+                # A capture someone opened on purpose gets the longer bound —
+                # they may well have more to say than a wake-word turn.
+                cap_ms = MANUAL_MAX_MS if manual else UTTERANCE_MAX_MS
+
                 ended = False
-                if manual:
-                    # The person holding the control decides when they are done.
-                    # Here a silence is a pause for thought, not a full stop, and
-                    # cutting in after 1.2s of it would make the button feel
-                    # broken. Only the hard cap still applies, as a bound on how
-                    # much audio one press can accumulate.
-                    if elapsed_ms >= MANUAL_MAX_MS:
+                if hand_driven:
+                    if elapsed_ms >= cap_ms:
                         logger.info("[voice] manual capture hit the cap")
                         ended = True
                 elif saw_speech and silence_ms >= UTTERANCE_SILENCE_MS:
                     ended = True
-                elif elapsed_ms >= UTTERANCE_MAX_MS:
+                elif elapsed_ms >= cap_ms:
                     ended = True
                 elif not saw_speech and elapsed_ms >= UTTERANCE_NO_SPEECH_MS:
-                    # Wake word fired but nobody spoke — don't pay for an STT
-                    # call on silence, just go back to listening.
-                    logger.info("[voice] no speech after wake, re-arming")
+                    # Opened but nobody spoke — don't pay for an STT call on
+                    # silence, just go back to listening. In mic mode this also
+                    # closes the microphone client-side, so a press that was a
+                    # misfire costs nothing and leaves nothing recording.
+                    logger.info("[voice] no speech after open, re-arming")
                     reset_detector()
                     state = ARMED
+                    manual = False
                     await websocket.send_json({"type": "wake.rearm"})
                     continue
 

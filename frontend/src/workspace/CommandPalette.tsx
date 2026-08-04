@@ -3,7 +3,7 @@ import { submitUtterance } from '../wire/submit'
 import { usePaneStore } from '../state/usePaneStore'
 import { useSettingsStore } from '../state/useSettingsStore'
 import { useWireStore } from '../state/useWireStore'
-import { armSession, disarmSession, toggleTalk } from '../wire/useWire'
+import { armSession, disarmSession, toggleTalk, toggleWake } from '../wire/useWire'
 import './CommandPalette.css'
 
 interface Command {
@@ -24,8 +24,9 @@ export function CommandPalette({ onClose }: Props) {
   const [active, setActive] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
   const panes = usePaneStore((s) => s.panes)
-  const { sessionOn, mode, setMode, ttsOn, setTts, captureSupported } = useSettingsStore()
+  const { sessionOn, mode, ttsOn, setTts, captureSupported } = useSettingsStore()
   const talking = useWireStore((s) => s.flags.wakePhase === 'capturing')
+  const wakeArmed = sessionOn && mode === 'wake'
 
   useEffect(() => {
     inputRef.current?.focus()
@@ -63,28 +64,23 @@ export function CommandPalette({ onClose }: Props) {
         },
       },
       {
-        id: 'talk',
+        id: 'wake',
         group: 'Controls',
-        label: talking
-          ? 'Finish speaking'
-          : mode === 'mic'
-            ? 'Talk to Nova'
-            : 'Talk without the wake word',
-        glyph: '◍',
-        run: () => toggleTalk(talking),
-      },
-      {
-        id: 'mode',
-        group: 'Controls',
-        label: mode === 'wake' ? 'Switch to pure mic' : 'Switch to the wake word',
+        label: wakeArmed ? 'Stop listening for the wake word' : 'Listen for the wake word',
         glyph: '◈',
         // The server reads the mode at accept time, so it cannot change under a
-        // live socket. Offered as a disabled-looking hint rather than hidden,
-        // so the option is discoverable while connected.
-        hint: sessionOn ? 'disconnect first' : undefined,
-        run: () => {
-          if (!sessionOn) setMode(mode === 'wake' ? 'mic' : 'wake')
-        },
+        // live socket. Surfaced as a hint rather than hidden, so the option
+        // stays discoverable while a mic-mode session is up.
+        hint: sessionOn && mode === 'mic' ? 'disconnect first' : undefined,
+        run: () => toggleWake(),
+      },
+      {
+        id: 'talk',
+        group: 'Controls',
+        label: talking ? 'Finish speaking' : 'Talk to Nova',
+        glyph: '◍',
+        hint: talking && wakeArmed ? 'or it waits for you' : undefined,
+        run: () => toggleTalk(talking),
       },
       {
         id: 'tts',
@@ -115,7 +111,7 @@ export function CommandPalette({ onClose }: Props) {
       }))
 
     return [...directives, ...controls, ...focusables]
-  }, [panes, sessionOn, mode, setMode, ttsOn, captureSupported, setTts, talking])
+  }, [panes, sessionOn, mode, wakeArmed, ttsOn, captureSupported, setTts, talking])
 
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase()
