@@ -178,7 +178,12 @@ function handleTool(msg: Extract<ServerMsg, { type: 'hermes.tool' }>) {
     // Nova drives the camera through her own MCP tools. Hermes prefixes tool
     // names with the server that provides them, so match loosely. god_eye_look
     // deliberately matches neither: it reports without changing the view.
-    if (name.includes('god_eye_show')) {
+    //
+    // god_eye_analyze does open the pane. It grabs a frame to show a vision
+    // model, and being told about the room while the feed it is describing
+    // stays hidden is worse than seeing it — asking what is happening is
+    // asking to be shown, near enough.
+    if (name.includes('god_eye_show') || name.includes('god_eye_analyze')) {
       const payload: CameraPayload = {
         src: '/camera/mjpeg',
         // A fresh nonce means a fresh connection rather than a cached dead one.

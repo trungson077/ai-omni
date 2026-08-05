@@ -52,11 +52,18 @@ def detections():
 
 
 @app.get("/snapshot")
-def snapshot():
+def snapshot(annotated: bool = True):
+    """A single still from the feed.
+
+    `annotated=false` is the one to hand a vision model — see
+    CameraStream.clean_snapshot for why the drawn labels have to go. The
+    default keeps the boxes, because a still fetched by a person is being
+    looked at by a person.
+    """
     stream.start()
     if not stream.wait_for_frame(10.0):
         raise HTTPException(503, "camera not available")
-    jpeg = stream.snapshot()
+    jpeg = stream.snapshot() if annotated else stream.clean_snapshot()
     if jpeg is None:
         raise HTTPException(503, "camera not available")
     return Response(content=jpeg, media_type="image/jpeg")

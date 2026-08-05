@@ -44,6 +44,8 @@ class CameraStream:
         self._stop_requested = False
 
         self._jpeg: bytes | None = None
+        # The same frame before any drawing. See clean_snapshot().
+        self._raw = None
         self._frame_id = 0
         self._detections: list[dict] = []
         self._fps = 0.0
@@ -102,6 +104,31 @@ class CameraStream:
         with self._cond:
             self._last_activity = time.monotonic()
             return self._jpeg
+
+    def clean_snapshot(self) -> bytes | None:
+        """The latest frame as JPEG, with no overlays burned in.
+
+        This is the still a vision model must be given. Every frame in the
+        MJPEG feed carries the detector's boxes, its class labels and the FPS
+        banner drawn into the pixels — right for a human watching, actively
+        misleading for a VLM, which reads those labels as part of the scene and
+        ends up describing the annotation rather than the room. Worse, it
+        inherits the detector's 80-class vocabulary, which is the exact
+        limitation asking a VLM was meant to escape.
+        Encoded on demand rather than per frame: the reader would otherwise pay
+        a second JPEG encode on every frame to serve a still that is only asked
+        for occasionally.
+        """
+        with self._cond:
+            self._last_activity = time.monotonic()
+            # Copy under the lock — the reader mutates its own frame in place on
+            # the next iteration, so handing out the array itself would let the
+            # encode below race a half-drawn frame.
+            frame = None if self._raw is None else self._raw.copy()
+        if frame is None:
+            return None
+        ok, buf = cv2.imencode(".jpg", frame, _ENCODE_PARAMS)
+        return buf.tobytes() if ok else None
 
     def detections(self) -> list[dict]:
         with self._cond:
@@ -186,6 +213,9 @@ class CameraStream:
                     continue
 
                 frame = cv2.resize(frame, (self.width, self.height))
+                # Taken before the draw calls below, which mutate `frame` in
+                # place. This is what clean_snapshot() hands to a VLM.
+                raw = frame.copy()
                 result = detector.detect(object_detector, frame)
                 items = detector.summarize(result)
                 detector.draw_object_detections(frame, result)
@@ -201,6 +231,7 @@ class CameraStream:
 
                 with self._cond:
                     self._jpeg = buf.tobytes()
+                    self._raw = raw
                     self._detections = items
                     self._fps = fps
                     self._frame_id += 1
@@ -215,6 +246,7 @@ class CameraStream:
             object_detector.close()
             with self._cond:
                 self._jpeg = None
+                self._raw = None
                 self._detections = []
                 self._fps = 0.0
                 self._thread = None
